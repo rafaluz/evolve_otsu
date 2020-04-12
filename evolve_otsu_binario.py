@@ -32,7 +32,7 @@ PASTA = 'novoteste500'  # ESSA É A PASTA DOS RESULTADOS, TEM QUE CRIAR ELA PRA 
 QTD_INDIVIDUOS = 500  # NÚMERO DE INDIVIDUOS
 NUMERO_GERACOES = 100 # NÚMERO DE GERACOES
 
-NUMERO_JOBS = 16 # NÚMERO DE NÚCLEOS DO PROCESSADOR PARA O JOBLIB
+NUMERO_JOBS = -1 # NÚMERO DE NÚCLEOS DO PROCESSADOR PARA O JOBLIB
 
 #############################################################################################
 #############################################################################################
@@ -306,7 +306,7 @@ def Avaliacao(populacao,geracao,imagens,mascaras_medico,n_genes):
     populacao_nova = populacao_nova[populacao_nova[:,3].argsort()[::-1]]
     
     # Salvando a população nova com todos os dices agora ordenada
-    np.savetxt('populacao60mutacao/dados_evolucao-geracao'+str(geracao)+'.csv',populacao_nova,delimiter=",",fmt='%s')
+    np.savetxt(PASTA+'/dados_evolucao-geracao'+str(geracao)+'.csv',populacao_nova,delimiter=",",fmt='%s')
     print("população ordenada salva")
     
     return populacao_nova, populacao_nova[:,3].mean()
