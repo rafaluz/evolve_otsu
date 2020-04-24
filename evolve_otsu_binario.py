@@ -8,7 +8,7 @@ import os
 import random
 import numpy as np
 from skimage.io import imread, imread_collection, imsave
-from scipy.misc import imsave as save
+#from scipy.misc import imsave as save
 import random
 from skimage.filters import median,threshold_otsu
 from skimage.color import rgb2gray
@@ -32,7 +32,7 @@ PASTA = 'novoteste500'  # ESSA É A PASTA DOS RESULTADOS, TEM QUE CRIAR ELA PRA 
 QTD_INDIVIDUOS = 500  # NÚMERO DE INDIVIDUOS
 NUMERO_GERACOES = 100 # NÚMERO DE GERACOES
 
-NUMERO_JOBS = -1 # NÚMERO DE NÚCLEOS DO PROCESSADOR PARA O JOBLIB
+NUMERO_JOBS = 16 # NÚMERO DE NÚCLEOS DO PROCESSADOR PARA O JOBLIB
 
 #############################################################################################
 #############################################################################################
@@ -104,7 +104,30 @@ def binary_initialization(population, parameters, n_bits):
             mother = binary_initialization(20, 3, 14)
     """
 
-    return np.around(np.random.random((population, parameters, n_bits)), decimals=0).astype(int)
+    populacao_bin = np.around(np.random.random((population, parameters, n_bits)), decimals=0).astype(int)
+    # Adicionando a população inicial individuos r, g e b
+    # ativado = 0.9999
+    ativado = [1,0,0,1,1,1,0,0,0,0,1,1,1,1]
+    desativado = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    
+    #red
+    populacao_bin[0][0] = ativado
+    populacao_bin[0][1] = desativado
+    populacao_bin[0][2] = desativado
+    #green
+    populacao_bin[1][0] = desativado
+    populacao_bin[1][1] = ativado
+    populacao_bin[1][2] = desativado
+    #blue
+    populacao_bin[2][0] = desativado
+    populacao_bin[2][1] = desativado
+    populacao_bin[2][2] = ativado
+    #rgb
+    populacao_bin[3][0] = ativado
+    populacao_bin[3][1] = ativado
+    populacao_bin[3][2] = ativado
+    
+    return populacao_bin
 
 def populacao_binaria_to_real(population_binaria,first=False):
     
