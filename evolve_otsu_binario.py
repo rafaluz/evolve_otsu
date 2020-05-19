@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+
+# Imports
 from __future__ import print_function
 import os
 
-# Imports
 import random
 import numpy as np
 from skimage.io import imread, imread_collection, imsave
@@ -25,37 +26,40 @@ import glob
 from sklearn.model_selection import train_test_split
 #get_ipython().run_line_magic('matplotlib', 'inline')
 
-#################################    CONFIGURAÇÕES    #######################################
+
+#################################    SETTINGS    #######################################
 #############################################################################################
 
-PASTA = 'novoteste500'  # ESSA É A PASTA DOS RESULTADOS, TEM QUE CRIAR ELA PRA RODAR
-QTD_INDIVIDUOS = 500  # NÚMERO DE INDIVIDUOS
-NUMERO_GERACOES = 100 # NÚMERO DE GERACOES
+#Here you inform the default settings of the algorithm:
 
-NUMERO_JOBS = 16 # NÚMERO DE NÚCLEOS DO PROCESSADOR PARA O JOBLIB
+FOLDER_RESULTS = 'novoteste500'  # THIS IS THE RESULTS FOLDER, YOU HAVE TO CREATE IT TO EXECUTE
+NUMBER_INDIVIDUALS = 500  # Individuals number
+NUMBER_GENERATIONS = 100 # Number of generations
+
+NUMBER_JOBS = 16 # Number of processor cores for the joblib
 
 #############################################################################################
 #############################################################################################
 
-# TODAS linux
+# Loading images and masks
 imagens = imread_collection('PH2Dataset/PH2 Dataset images/*/*'+'_Dermoscopic_Image/*')
 mascaras_medico = imread_collection('PH2Dataset/PH2 Dataset images/*/*'+'_lesion/*')
 
 
-#x_train, x_val, y_train, y_val = train_test_split(imagens, mascaras_medico, test_size = 0.4)
+# Dividing into training and testing
 x_train, x_test, y_train, y_test = train_test_split(imagens, mascaras_medico, test_size = 0.2)
 
 
-##############3 # população inicial
+############### initial population
 
 
-# algumas funções necessárias
-# Função que converte o array binario em uma string binaria
+# some necessary functions
+# Function that converts the binary array to a binary string
 def arraybinario_to_string(binario):
     str_bin = str(binario).strip('[]').replace(" ", "")
     return str_bin
 
-#Função que converte a string binaria para real
+# Function that converts the binary string to real
 def converte_decimal(binario):
     alelo_dec = int(binario, 2)
     if alelo_dec > 9999:
@@ -63,15 +67,7 @@ def converte_decimal(binario):
     
     return float("0." + str(alelo_dec))
 
-# função de decimal para binario
-# def dec2bin(n):
-#     b = ''
-#     while n != 0:
-#         b = b + str(n % 2)
-#         n = int(n / 2)
-#     return b[::-1]
-
-# função de decimal para binario
+# decimal function to binary
 def d2b(n):
     if n == 0:
         return ''
@@ -79,12 +75,10 @@ def d2b(n):
         return d2b(n//2) + str(n%2)
     
 
-# Minha função de real para binario
+# My real to binary function
 def real_to_binario(real):
     real = int(real*10000)
     return d2b(real)
-
-
 
 
 def binary_initialization(population, parameters, n_bits):
@@ -105,8 +99,9 @@ def binary_initialization(population, parameters, n_bits):
     """
 
     populacao_bin = np.around(np.random.random((population, parameters, n_bits)), decimals=0).astype(int)
-    # Adicionando a população inicial individuos r, g e b
-    # ativado = 0.9999
+    
+    # Adding the initial population of individuals r, g and b
+    # enabled = 0.9999
     ativado = [1,0,0,1,1,1,0,0,0,0,1,1,1,1]
     desativado = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
     
@@ -166,17 +161,9 @@ def populacao_real_to_binaria(populacao_real):
     return populacao_bin
 
 
-#FUNÇÃO DE ROMUERE
-# def bin_float(binary,mini,maxi):
-#     b10 = int(binary,2)
-#     x1 = mini+(maxi-mini)*b10/(2**len(binary)-1)
-#     return x1
+################################ Evaluation
 
-
-
-####################################33 # Avaliação
-
-############################ alterado
+########### My RGB to Gray function
 def rgb2grayrafa(x,y,z,imagem):
     r, g, b = imagem[:,:,0], imagem[:,:,1], imagem[:,:,2]
     imagem_gray = x * r + y * g + z * b
@@ -185,45 +172,46 @@ def rgb2grayrafa(x,y,z,imagem):
     imagem_gray /= (imagem_gray.max()/1.0)
     return imagem_gray
 
-
+########### Segmentation Function
 def segmentaMelanomaComBorda(imagem):
-    # Converte para cinza
+
     im = imagem
-    #im = imagem[:,:,1]
-    # Borra a imagem para ajudar a segmentar os pelos
+
+    # Blurs the image to help segment hair
     img_med = median(im,np.ones((100,100)))
-    # pega o melhor limiar de otsu
+    # takes the best otsu threshold
     limiar = threshold_otsu(im)
-    # Remove pedaços soltos
+    # Removes loose pieces
     img_bin = closing(im > limiar, square(5))
-    # Inverter preto e branco para poder remover as bordas
+    # Invert black and white so you can remove the edges
     inverted_img = util.invert(img_bin)
-    # Remove a borda
+    # Remove the border
     cleared = clear_border(inverted_img)
     
-    # Condição
+    # Condition to identify images that have become completely black
     if cleared.mean() < 0.1:
         cleared = inverted_img
         
-    #le os labels da mascara
+    # read the chewing labels
     labels  =  label ( cleared ) 
 
-    #pega as regioes
+    # take the regions
     regions = regionprops(labels)
     
     try:
-        #seleciona apenas a maior regiao
+        # select only the largest region
         maior_region = reduce((lambda x, y: x if x['Area']>y['Area'] else y), regions)
     except:
-        #print('preta')
+        
         return cleared
 
-    #gera a a mascara da maior regiao
+    # generates the mask of the largest region
     mask = np.zeros(labels.shape)
     mask[maior_region['coords'][:,0],maior_region['coords'][:,1]]=1
 
     return mask
 
+# Calculates dice
 def melhorDiceNovo(mascaras_minha,mascara_medico):
     inte =  np.logical_and(mascara_medico, mascaras_minha)
     uniao = np.logical_or(mascara_medico, mascaras_minha)
@@ -243,27 +231,26 @@ def processa_rgb_segmenta_dice(x,y,z,imagem,mascara):
     return dicecom
     
     
-########################## usando joblib
+########################## using joblib
 def ComBordaOuSemBorda(x,y,z,imagens,mascaras_medico):
-    resultado = joblib.Parallel(n_jobs=NUMERO_JOBS)(joblib.delayed(processa_rgb_segmenta_dice)(x,y,z,imagens[nr],mascaras_medico[nr]) for nr in range(len(imagens)))
+    resultado = joblib.Parallel(n_jobs=NUMBER_JOBS)(joblib.delayed(processa_rgb_segmenta_dice)(x,y,z,imagens[nr],mascaras_medico[nr]) for nr in range(len(imagens)))
           
     return np.array(resultado).mean()
 #######################################################################
 
 
 
-# variavel para controlar o print de qual individuo começou a retomada do processo
+# variable to control the print of which individual started the process resumption
 retomada = False
 
-# Função de avaliação dos individuos (fitness evaluation)
+# Evaluation function of individuals (fitness evaluation)
 def Avaliacao(populacao,geracao,imagens,mascaras_medico,n_genes):
     
     global retomada
     
     populacao_nova = np.zeros((populacao.shape[0],n_genes+1))
     
-    # Se for a população inicial, ai nao coloca dice, se for qualquer outra geração, coloca o dice.
-    
+    # If it is the initial population, there is no index, if it is any other generation, it is the index.
     if populacao.shape[1] == 3:
         for i,p in enumerate(populacao):
             x = p[0]
@@ -271,36 +258,31 @@ def Avaliacao(populacao,geracao,imagens,mascaras_medico,n_genes):
             z = p[2]
             
             populacao_nova[:,:-1] = populacao
-            ########print('Inicio do Individuo ',i,' - X ',x,' Y ',y,' Z ',z)
             dice = ComBordaOuSemBorda(x,y,z,imagens,mascaras_medico)
             print('##### Fim do Individuo ',i,' - X ',x,' Y ',y,' Z ',z,' - Dice: ',dice)
             populacao_nova[i,-1] = dice
-            # Salvando o dice de cada individuo que rodou na rede
-            np.savetxt(PASTA+'/dados_evolucao-geracao'+str(geracao)+'.csv',populacao_nova,delimiter=",",fmt='%s')
-            ########print('individuo salvo')
+            # Saving the index of each individual who ran on the network
+            np.savetxt(FOLDER_RESULTS+'/dados_evolucao-geracao'+str(geracao)+'.csv',populacao_nova,delimiter=",",fmt='%s')
     
-    # Quando nao for a populacao inicial e sim a de um csv lido
+    # When it is not the initial population, but that of a read CSV
     else:
         
-        # Verificar se todos os individuos ja foram avaliados
-        # todos avaliados
+        # Check if all individuals have already been evaluated
+        # all evaluated
         if populacao.shape[0] == np.count_nonzero(populacao[:,-1]):
             populacao_nova[:,:-1] = populacao[:,:-1]
-            # geracao += 1 # comentei pq ja incrementa na função geral
             for i,p in enumerate(populacao):
                 x = p[0]
                 y = p[1]
                 z = p[2]
 
-                ########print('Inicio do Individuo ',i,' - X ',x,' Y ',y,' Z ',z)
                 dice = ComBordaOuSemBorda(x,y,z,imagens,mascaras_medico)
                 print('##### Fim do Individuo ',i,' - X ',x,' Y ',y,' Z ',z,' - Dice: ',dice)
                 populacao_nova[i,-1] = dice
-                # Salvando o dice de cada individuo que rodou na rede
-                np.savetxt(PASTA+'/dados_evolucao-geracao'+str(geracao)+'.csv',populacao_nova,delimiter=",",fmt='%s')
-                ######## print('individuo salvo')
+                # Saving the index of each individual who ran on the network
+                np.savetxt(FOLDER_RESULTS+'/dados_evolucao-geracao'+str(geracao)+'.csv',populacao_nova,delimiter=",",fmt='%s')
         
-        # nem todos foram avaliados ou nenhum
+        # not all were evaluated or none
         else:
             populacao_nova = populacao
             for i,p in enumerate(populacao):
@@ -308,34 +290,31 @@ def Avaliacao(populacao,geracao,imagens,mascaras_medico,n_genes):
                 y = p[1]
                 z = p[2]
                 
-                # condição para calcular apenas dos que tem dice 0.0
+                # condition to calculate only those with a 0.0 index
                 if populacao_nova[i,-1] == 0.0:
-                    # Condição para mostrar em qual individuo retomou
+                    # Condition to show which individual you took back
                     if retomada == True:
                         print("##################  Retomando processo do individuo ", i)
                         retomada = False
                         
-                    #######print('Inicio do Individuo ',i,' - X ',x,' Y ',y,' Z ',z)
                     dice = ComBordaOuSemBorda(x,y,z,imagens,mascaras_medico)
                     print('##### Fim do Individuo ',i,' - X ',x,' Y ',y,' Z ',z,' - Dice: ',dice)
                     populacao_nova[i,-1] = dice
 
-                    # Salvando o dice de cada individuo que rodou na rede
-                    np.savetxt(PASTA+'/dados_evolucao-geracao'+str(geracao)+'.csv',populacao_nova,delimiter=",",fmt='%s')
-                    #########print('individuo salvo')
+                    # Saving the index of each individual who ran on the network
+                    np.savetxt(FOLDER_RESULTS+'/dados_evolucao-geracao'+str(geracao)+'.csv',populacao_nova,delimiter=",",fmt='%s')
                     retomada = False
  
-    # ordenar pelo fitness
+    # sort by fitness
     populacao_nova = populacao_nova[populacao_nova[:,3].argsort()[::-1]]
     
-    # Salvando a população nova com todos os dices agora ordenada
-    np.savetxt(PASTA+'/dados_evolucao-geracao'+str(geracao)+'.csv',populacao_nova,delimiter=",",fmt='%s')
-    print("população ordenada salva")
+    # Saving the new population with all the dices now sorted
+    np.savetxt(FOLDER_RESULTS+'/dados_evolucao-geracao'+str(geracao)+'.csv',populacao_nova,delimiter=",",fmt='%s')
     
     return populacao_nova, populacao_nova[:,3].mean()
 
 
-############ Seleção de pai e mãe para cruzamento
+############ Selection of father and mother for crossing
 
 def individual_extractor(population, individual):
     """
@@ -392,7 +371,7 @@ def tournament_selection(population):
 
 
 
-########################### Cruzamento
+########################### Crossover
 
 
 """
@@ -429,7 +408,7 @@ def uniform_crossover(father, mother):
 
 
 
-########################### # Mutação
+############################ Mutation
 
 
 """
@@ -464,14 +443,14 @@ def mutation_all(population):
     return population
 
 
-##################### NOVA POPULAÇÃO 
+##################### NEW POPULATION
 
 def novaPopulacao(population, childrens, elitism=20):
     
     nova_populacao = np.zeros((population.shape[0],population.shape[1],population.shape[2])).astype(int)
     
     tamanho_populacao = population.shape[0]
-    # quantidade de filhos gerados e de pais que seguirão por elitismo para a nova população
+    # number of children generated and parents who will follow by elitism for the new population
     qtd_elitism = tamanho_populacao*elitism//100
     qtd_filhos = tamanho_populacao - qtd_elitism
     
@@ -481,25 +460,19 @@ def novaPopulacao(population, childrens, elitism=20):
     return nova_populacao
 
 
-#########################################3 # função central
+##################################### MAIN FUNCTION
 
-def evoluirOtsu(imagens,mascaras_medico,n_indiduals,n_genes,decimal_places,begin_gene,end_gene,m_probability,begin_allele,end_allele,elitism):
+def evoluirOtsu(imagens,mascaras_medico,n_indiduals,n_genes):
     global retomada
     print('######## inicio da evolução ########')
     dados_geracao = []
     
-    #################### aqui quero gerar binaria e converter pra real
-    # inicialização da nova população
-    
-    
-    #inicio binario e converto pra real
+    #start binary and convert to real
     population_init = binary_initialization(population=n_indiduals, parameters=n_genes, n_bits=14)
     population_init = populacao_binaria_to_real(population_init,first=True)
 
-    ####################
-    
-    # Agora vamos ver se tem alguma geração com individuos, se não tiver ai que usa a população inicial
-    csv_dados_evolucao = glob.glob(PASTA+'/dados_evolucao-geracao*.csv')
+    # Now let's see if there is a generation with individuals, if not there that uses the initial population
+    csv_dados_evolucao = glob.glob(FOLDER_RESULTS+'/dados_evolucao-geracao*.csv')
     csv_dados_evolucao.sort()
     if len(csv_dados_evolucao) == 0:
         retomada = False
@@ -507,10 +480,8 @@ def evoluirOtsu(imagens,mascaras_medico,n_indiduals,n_genes,decimal_places,begin
 
         # Fitness
         geracao = 0
-        #################### aqui a população ja entra como real
+        #################### here the population already enters as real
         populacao, aptidao = Avaliacao(population_init,geracao,imagens,mascaras_medico, n_genes)
-
-        #np.savetxt('populacao/dados_evolucao-geracao'+str(geracao)+'.csv',populacao,delimiter=",",fmt='%s')
 
         print(" ######################################## ")
         print('Geração: ',geracao, ' / Media DSC: ', aptidao)
@@ -519,11 +490,10 @@ def evoluirOtsu(imagens,mascaras_medico,n_indiduals,n_genes,decimal_places,begin
         dados_geracao.append(populacao)
     else:
         retomada = True
-        #print("################## Retomando processo da geração", len(csv_dados_evolucao)-1)
-        # pegar o ultimo csv
+        # get the last csv
         population = np.genfromtxt(csv_dados_evolucao[-1],delimiter=',')
         geracao = len(csv_dados_evolucao)-1
-        # se todos ja tiverem sido avalidado, incrementar a geração
+        # if all have already been validated, increase the generation
         if population.shape[0] == np.count_nonzero(population[:,-1]):
             geracao +=1
         
@@ -537,82 +507,53 @@ def evoluirOtsu(imagens,mascaras_medico,n_indiduals,n_genes,decimal_places,begin
         dados_geracao.append(populacao)
         
     
-    # condição de parada
-    while aptidao <= 0.99 and geracao < NUMERO_GERACOES: ########## AQUI DEFINO QUANTAS GERAÇÕES VAI SER
+    # stop condition
+    while aptidao <= 0.99 and geracao < NUMBER_GENERATIONS: ########## HERE I DEFINE HOW MANY GENERATIONS WILL BE
         
-        #################### aqui eu pego a populacao e converto pra populacao binaria
+        #################### here I take the population and convert it to the binary population
         ##### nao precisa ter o dice
         populacao_binaria = populacao_real_to_binaria(populacao)
         
-        
-        # Seleção de pais e mães
+        # Selection of fathers and mothers
         pai, mae = tournament_selection(populacao_binaria)
         
-        # Recombinação
+        # Crossover
         filhos = uniform_crossover(pai, mae)
         
-        # mutando os filhos
+        # mutating children
         filhos_mutados = mutation_all(filhos)
 
-        # Concepção da nova população
+        # Conception of the new population
         nova_populacao_binaria = novaPopulacao(populacao_binaria, filhos_mutados, elitism=20)
         
         geracao += 1
         
-        #################### aqui converto de volta pra real a nova população
-        ##### aqui precisa ter o campo do dice, porem com 0
+        #################### here I convert the new population back to real
+        ##### here you need to have the dice field, but with 0
         nova_populacao = populacao_binaria_to_real(nova_populacao_binaria,first=False)
         
-        ##### print(nova_populacao.shape)
-        # Fitness novo
+        # New Fitness
         populacao, aptidao = Avaliacao(nova_populacao,geracao,imagens,mascaras_medico,n_genes)
         
         print(" ######################################## ")
         print('Geração: ',geracao, ' / Media DSC: ', aptidao)
-        #print(populacao)
         print(" ######################################## ")
         
-        # populacao é toda a populacao de uma geracao
+        # population is the entire population of a generation
         dados_geracao.append(populacao)
-        #np.savetxt('populacao/dados_evolucao-geracao'+str(geracao)+'.csv',populacao,delimiter=",",fmt='%s')
     
     print('######## fim da evolução ########')
-    # dados_geracao são todas as geracoes
+    # dados_geracao are all generations
     return dados_geracao
 
 
 
-############################### AQUI ONDE CHAMA A EXECUÇÃO ###########################
+############################### HERE WHERE EXECUTION CALLS ###########################
 #######################################################################################
 
 # so ta valendo o parametro n_individuals, que é o numero de individuos
-dados_geracao = evoluirOtsu(x_train,y_train,n_indiduals=QTD_INDIVIDUOS,n_genes=3,decimal_places=4,begin_gene=0,end_gene=1,m_probability=5,begin_allele=0,end_allele=1,elitism=20)
+dados_geracao = evoluirOtsu(x_train,y_train,n_indiduals=NUMBER_INDIVIDUALS,n_genes=3)
 
 
 #############################################################################################
 #############################################################################################
-
-
-def save_results(dados):
-    # cria a nova matrix com a coluna da geração
-    dadosnovo = np.zeros((dados.shape[0],dados.shape[1],dados.shape[2]+1))
-    
-    # nova matrix recebe os dados das gerações
-    dadosnovo[:,:,:-1] = dados[:,:,:]
-    
-    # adiciona o numero das gerações
-    for i in range(dadosnovo.shape[0]):
-        for j in range(dadosnovo.shape[1]):
-            dadosnovo[i,:,4] = i
-    
-    # criação do dataframe que ira receber os resultados com as gerações
-    nova_populacaogigante = df = pd.DataFrame(columns=['X', 'Y', 'Z', 'ACC', 'Geration'])
-    
-    for i in range(dadosnovo.shape[0]):
-        nova_populacao = pd.DataFrame(columns=['X', 'Y', 'Z', 'ACC', 'Geration'],data=dadosnovo[i])
-        nova_populacaogigante = nova_populacaogigante.append(nova_populacao, ignore_index=True)
-    
-    return nova_populacaogigante
-
-
-
