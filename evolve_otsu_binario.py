@@ -45,13 +45,11 @@ NUMBER_JOBS = 16 # Number of processor cores for the joblib
 imagens = imread_collection('PH2Dataset/PH2 Dataset images/*/*'+'_Dermoscopic_Image/*')
 mascaras_medico = imread_collection('PH2Dataset/PH2 Dataset images/*/*'+'_lesion/*')
 
-
 # Dividing into training and testing
 x_train, x_test, y_train, y_test = train_test_split(imagens, mascaras_medico, test_size = 0.2)
 
 
 ############### initial population
-
 
 # some necessary functions
 # Function that converts the binary array to a binary string
@@ -221,7 +219,6 @@ def melhorDiceNovo(mascaras_minha,mascara_medico):
 
 
 #######################################################################
-########################## usando joblib
 import joblib 
 def processa_rgb_segmenta_dice(x,y,z,imagem,mascara):
     im = rgb2grayrafa(x,y,z,imagem)
@@ -237,7 +234,6 @@ def ComBordaOuSemBorda(x,y,z,imagens,mascaras_medico):
           
     return np.array(resultado).mean()
 #######################################################################
-
 
 
 # variable to control the print of which individual started the process resumption
@@ -315,7 +311,6 @@ def Avaliacao(populacao,geracao,imagens,mascaras_medico,n_genes):
 
 
 ############ Selection of father and mother for crossing
-
 def individual_extractor(population, individual):
     """
         Parameters
@@ -373,7 +368,6 @@ def tournament_selection(population):
 
 ########################### Crossover
 
-
 """
     Cite: EIBEN, Agoston E. et al. Introduction to evolutionary computing. Berlin: springer, 2003.
     4.2.2 Recombination for Binary Representation
@@ -388,7 +382,6 @@ def tournament_selection(population):
         the first parent; otherwise from the second. The second offspring is created
         using the inverse mapping.
 """
-
 
 def uniform_crossover(father, mother):    
     children = np.zeros((father.shape[0]*2, father.shape[1], father.shape[2])).astype(int)
@@ -407,16 +400,13 @@ def uniform_crossover(father, mother):
     return children
 
 
-
 ############################ Mutation
-
 
 """
     Cite: "Genetic Algorithms - Mutation."https://www.tutorialspoint.com/genetic_algorithms/genetic_algorithms_mutation.htm. Acessado em 18 nov de 2019.
         Bit Flip Mutation - In this bit flip mutation, we select one or more random bits and flip them. 
         This is used for binary encoded GAs.
 """
-
 
 def binary_bit_flip_mutation(individual):  
     """
@@ -511,7 +501,7 @@ def evoluirOtsu(imagens,mascaras_medico,n_indiduals,n_genes):
     while aptidao <= 0.99 and geracao < NUMBER_GENERATIONS: ########## HERE I DEFINE HOW MANY GENERATIONS WILL BE
         
         #################### here I take the population and convert it to the binary population
-        ##### nao precisa ter o dice
+        ##### no need to have the index
         populacao_binaria = populacao_real_to_binaria(populacao)
         
         # Selection of fathers and mothers
@@ -551,9 +541,8 @@ def evoluirOtsu(imagens,mascaras_medico,n_indiduals,n_genes):
 ############################### HERE WHERE EXECUTION CALLS ###########################
 #######################################################################################
 
-# so ta valendo o parametro n_individuals, que é o numero de individuos
+# This is where the main function is called
 dados_geracao = evoluirOtsu(x_train,y_train,n_indiduals=NUMBER_INDIVIDUALS,n_genes=3)
-
 
 #############################################################################################
 #############################################################################################
